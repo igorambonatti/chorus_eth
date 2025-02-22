@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - STAKE_VAULT_ADDRESS=0xcb1d4c9834c7ee489830ff43802685d14f4c177b

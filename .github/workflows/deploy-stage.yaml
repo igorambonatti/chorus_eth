@@ -1,0 +1,79 @@
+name: Deploy to Cloud Run - My App
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  setup-build-deploy:
+    name: Setup, Build, and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Authenticate to Google Cloud (Main)
+        if: github.ref == 'refs/heads/main'
+        uses: google-github-actions/auth@v2.1.2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_PROD }}
+
+      - name: Authenticate to Google Cloud (Dev)
+        if: github.ref == 'refs/heads/dev'
+        uses: google-github-actions/auth@v2.1.2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Enable Cloud Run API
+        run: gcloud services enable run.googleapis.com
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: gcloud auth configure-docker
+
+      - name: Build and push Docker image (Main)
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: gcr.io/${{ secrets.GCP_PROJECT_ID_PROD }}/my-app-prod:${{ github.sha }}
+          secrets: |
+            STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_PROD }}
+
+      - name: Build and push Docker image (Dev)
+        if: github.ref == 'refs/heads/dev'
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-app-dev:${{ github.sha }}
+          secrets: |
+            STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_DEV }}
+
+      - name: Deploy to Cloud Run (Main)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_PROD }}
+        run: |
+          gcloud run deploy my-app-prod --verbosity=debug \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID_PROD }}/my-app-prod:${{ github.sha }} \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --set-env-vars STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_PROD }}
+
+      - name: Deploy to Cloud Run (Dev)
+        if: github.ref == 'refs/heads/dev'
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          gcloud run deploy my-app-dev --verbosity=debug \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-app-dev:${{ github.sha }} \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --set-env-vars STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_DEV }}
