@@ -1,17 +1,20 @@
-# Dockerfile
-FROM node:16-alpine
+# Usa Node 18 para construir a aplicação
+FROM node:18 AS builder
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copia arquivos de dependências e instala as dependências necessárias
 COPY package*.json ./
-RUN npm install --production
+RUN npm install
 
-# Copia o restante da aplicação
 COPY . .
+RUN npx tsc
 
-# Expõe a porta em que a aplicação irá rodar (ajuste se necessário)
-EXPOSE 8080
+FROM gcr.io/distroless/nodejs18
 
-# Comando para iniciar a aplicação
-CMD ["npm", "start"]
+WORKDIR /usr/src/app
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/package*.json ./
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+
+EXPOSE $PORT
+CMD ["dist/main"]

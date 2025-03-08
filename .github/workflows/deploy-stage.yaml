@@ -33,7 +33,7 @@ jobs:
       - name: Enable Cloud Run API
         run: gcloud services enable run.googleapis.com
 
-      - name: Configure Docker to use gcloud as a credential helper
+      - name: Configure Docker to use the gcloud command-line tool as a credential helper
         run: gcloud auth configure-docker
 
       - name: Build and push Docker image (Main)
@@ -43,6 +43,7 @@ jobs:
           push: true
           tags: gcr.io/${{ secrets.GCP_PROJECT_ID_PROD }}/my-app-prod:${{ github.sha }}
           secrets: |
+            NODE_ENV=production
             STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_PROD }}
 
       - name: Build and push Docker image (Dev)
@@ -52,6 +53,7 @@ jobs:
           push: true
           tags: gcr.io/${{ secrets.GCP_PROJECT_ID }}/my-app-dev:${{ github.sha }}
           secrets: |
+            NODE_ENV=production
             STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_DEV }}
 
       - name: Deploy to Cloud Run (Main)
@@ -64,7 +66,7 @@ jobs:
             --platform managed \
             --region us-central1 \
             --allow-unauthenticated \
-            --set-env-vars STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_PROD }}
+            --set-env-vars NODE_ENV=production,STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_PROD }}
 
       - name: Deploy to Cloud Run (Dev)
         if: github.ref == 'refs/heads/dev'
@@ -76,4 +78,4 @@ jobs:
             --platform managed \
             --region us-central1 \
             --allow-unauthenticated \
-            --set-env-vars STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_DEV }}
+            --set-env-vars NODE_ENV=production,STAKE_VAULT_ADDRESS=${{ secrets.STAKE_VAULT_ADDRESS_DEV }}

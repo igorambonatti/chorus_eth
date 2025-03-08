@@ -66,7 +66,6 @@ export class StakeService {
 
     const amountInEth = ethers.formatEther(stake.amount);
     const normalizedAmount = parseFloat(amountInEth).toString();
-
     const { tx } = await this.staker.buildUnstakeTx({
       delegatorAddress,
       validatorAddress,
